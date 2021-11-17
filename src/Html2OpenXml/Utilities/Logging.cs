@@ -1,10 +1,10 @@
 ﻿/* Copyright (C) Olivier Nizet https://github.com/onizet/html2openxml - All Rights Reserved
- * 
+ *
  * This source is subject to the Microsoft Permissive License.
  * Please see the License.txt file for more information.
  * All other rights reserved.
- * 
- * THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY 
+ *
+ * THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
  * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
  * PARTICULAR PURPOSE.
@@ -73,29 +73,9 @@ namespace HtmlToOpenXml.Utilities
 		/// </summary>
 		private static void Initialize()
 		{
-#if NETSTANDARD1_3 || NETSTANDARD2_0
             traceSource = new TraceSource(TraceSourceName);
 			enabled = traceSource.Switch.Level != SourceLevels.Off;
-#else
-            try
-			{
-				traceSource = new TraceSource(TraceSourceName);
-				enabled = traceSource.Switch.Level != SourceLevels.Off;
-			}
-            catch (System.Configuration.ConfigurationException)
-            {
-                // app.config has an error
-                enabled = false;
-			}
-
-            if (enabled)
-			{
-				AppDomain appDomain = AppDomain.CurrentDomain;
-				appDomain.DomainUnload += OnDomainUnload;
-				appDomain.ProcessExit += OnDomainUnload;
-			}
-#endif
-        }
+		}
 
         #endregion
 

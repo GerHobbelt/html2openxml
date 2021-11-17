@@ -1,21 +1,15 @@
-[![Latest version](https://img.shields.io/nuget/v/HtmlToOpenXml.dll.svg)](https://www.nuget.org/packages/HtmlToOpenXml.dll)
+[![Latest version](https://img.shields.io/nuget/v/Microting.HtmlToOpenXml.dll.svg)](https://www.nuget.org/packages/Microting.HtmlToOpenXml.dll)
 [![License MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/onizet/html2openxml/blob/master/LICENSE)
-[![NuGet](https://img.shields.io/nuget/dt/HtmlToOpenXml.dll.svg)]()
-[![codecov.io](https://codecov.io/github/onizet/html2openxml/coverage.svg?branch=master)](https://codecov.io/github/onizet/html2openxml?branch=master)
+[![NuGet](https://img.shields.io/nuget/dt/Microting.HtmlToOpenXml.dll.svg)]()
+[![codecov.io](https://codecov.io/github/onizet/microting/coverage.svg?branch=master)](https://codecov.io/github/microting/html2openxml?branch=master)
 
-[![netstandard1.3](https://img.shields.io/badge/netstandard-1.3-brightgreen.svg)](https://img.shields.io/badge/netstandard-1.3-brightgreen.svg)
-[![netstandard2.0](https://img.shields.io/badge/netstandard-2.0-brightgreen.svg)](https://img.shields.io/badge/netstandard-2.0-brightgreen.svg)
-[![net46](https://img.shields.io/badge/net-46-brightgreen.svg)](https://img.shields.io/badge/net-46-brightgreen.svg)
+[![net6.0](https://img.shields.io/badge/net-6.0-brightgreen.svg)](https://img.shields.io/badge/net-6.0-brightgreen.svg)
 
 # What is Html2OpenXml?
 
 Html2OpenXml is a small .Net library that convert simple or advanced HTML to plain OpenXml components. This program has started in 2009, initially to convert user's comments from SharePoint to Word.
 
-<<<<<<< HEAD
-This library supports both **.Net Core (netstandard2.1)** and **.Net Framework 4.8**.
-=======
-This library supports both **.Net Core (netstandard1.3)** and **.Net Framework 4.6**.
->>>>>>> dev
+This library only supports **.Net 6.0**.
 
 Depends on [DocumentFormat.OpenXml](https://www.nuget.org/packages/DocumentFormat.OpenXml/).
 
