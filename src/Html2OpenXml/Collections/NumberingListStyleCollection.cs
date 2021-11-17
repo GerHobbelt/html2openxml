@@ -262,10 +262,10 @@ namespace HtmlToOpenXml.Collections
 
 		public void EndList(bool popInstances = true)
 		{
+			levelDepth--;
 			if (levelDepth > 0 && popInstances)
 				numInstances.Pop();  // decrement for nested list
 
-			levelDepth--;
 			firstItem = true;
 		}
 
