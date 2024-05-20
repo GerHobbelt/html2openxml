@@ -9,9 +9,6 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
  * PARTICULAR PURPOSE.
  */
-using System;
-using System.ComponentModel;
-using System.Globalization;
 
 namespace HtmlToOpenXml
 {
@@ -25,7 +22,7 @@ namespace HtmlToOpenXml
 
         public Margin(Unit top, Unit right, Unit bottom, Unit left)
         {
-            this.sides = new[] { top, right, bottom, left };
+            this.sides = [top, right, bottom, left];
         }
 
         /// <summary>
@@ -51,11 +48,11 @@ namespace HtmlToOpenXml
         /// <b>margin:25px;</b>
         /// all four margins are 25px
         /// </remarks>
-        public static Margin Parse(String str)
+        public static Margin Parse(string? str)
         {
             if (str == null) return new Margin();
 
-            String[] parts = str.Split(HttpUtility.WhiteSpaces);
+            var parts = str.Split(HttpUtility.WhiteSpaces);
             switch (parts.Length)
             {
                 case 1:
@@ -89,61 +86,61 @@ namespace HtmlToOpenXml
             return new Margin();
         }
 
-		private void EnsureSides()
-		{
-			if (this.sides == null) sides = new Unit[4];
-		}
+        private void EnsureSides()
+        {
+            if (this.sides == null) sides = new Unit[4];
+        }
 
         //____________________________________________________________________
         //
 
         /// <summary>
-		/// Gets or sets the unit of the bottom side.
+        /// Gets or sets the unit of the bottom side.
         /// </summary>
         public Unit Bottom
         {
             get { return sides == null ? Unit.Empty : sides[2]; }
-			set { EnsureSides(); sides[2] = value; }
+            set { EnsureSides(); sides[2] = value; }
         }
 
         /// <summary>
-		/// Gets or sets the unit of the left side.
+        /// Gets or sets the unit of the left side.
         /// </summary>
         public Unit Left
         {
-			get { return sides == null ? Unit.Empty : sides[3]; }
-			set { EnsureSides(); sides[3] = value; }
+            get { return sides == null ? Unit.Empty : sides[3]; }
+            set { EnsureSides(); sides[3] = value; }
         }
 
         /// <summary>
-		/// Gets or sets the unit of the top side.
+        /// Gets or sets the unit of the top side.
         /// </summary>
         public Unit Top
         {
-			get { return sides == null ? Unit.Empty : sides[0]; }
-			set { EnsureSides(); sides[0] = value; }
+            get { return sides == null ? Unit.Empty : sides[0]; }
+            set { EnsureSides(); sides[0] = value; }
         }
 
         /// <summary>
-		/// Gets or sets the unit of the right side.
+        /// Gets or sets the unit of the right side.
         /// </summary>
         public Unit Right
         {
-			get { return sides == null ? Unit.Empty : sides[1]; }
-			set { EnsureSides(); sides[1] = value; }
+            get { return sides == null ? Unit.Empty : sides[1]; }
+            set { EnsureSides(); sides[1] = value; }
         }
 
         public bool IsValid
         {
-            get { return sides != null && Left.IsValid && Right.IsValid && Bottom.IsValid && Top.IsValid; }
+            get => sides != null && Left.IsValid && Right.IsValid && Bottom.IsValid && Top.IsValid;
         }
 
-		/// <summary>
-		/// Gets whether at least one side has been specified.
-		/// </summary>
-		public bool IsEmpty
-		{
-			get { return sides == null || !(Left.IsValid || Right.IsValid || Bottom.IsValid || Top.IsValid); }
-		}
+        /// <summary>
+        /// Gets whether at least one side has been specified.
+        /// </summary>
+        public bool IsEmpty
+        {
+            get => sides == null || !(Left.IsValid || Right.IsValid || Bottom.IsValid || Top.IsValid);
+        }
     }
 }
