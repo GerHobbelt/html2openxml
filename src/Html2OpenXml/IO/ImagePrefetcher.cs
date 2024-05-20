@@ -12,6 +12,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using DocumentFormat.OpenXml.Packaging;
 
@@ -60,12 +61,21 @@ namespace HtmlToOpenXml.IO
             if (prefetchedImages.Contains(imageUri))
                 return prefetchedImages[imageUri];
 
+            HtmlImageInfo iinfo;
             if (DataUri.IsWellFormed(imageUri)) // data inline, encoded in base64
             {
-                return ReadDataUri(imageUri);
+                iinfo = ReadDataUri(imageUri);
+            }
+            else
+            {
+                iinfo = DownloadRemoteImage(imageUri);
             }
 
-            return DownloadRemoteImage(imageUri);
+            if (iinfo != null)
+            {
+                prefetchedImages.Add(iinfo);
+            }
+            return iinfo;
         }
 
         /// <summary>
@@ -75,17 +85,10 @@ namespace HtmlToOpenXml.IO
         {
             Uri imageUri = new Uri(src, UriKind.RelativeOrAbsolute);
             Resource response;
-            try
-            {
-                response = resourceLoader.FetchAsync(imageUri, CancellationToken.None).Result;
-                if (response?.Content == null)
-                    return null;
-            }
-            catch (Exception exc)
-            {
-                if (Logging.On) Logging.PrintError(String.Format("Error fetching image from url: {0}", src), exc);
+
+            response = resourceLoader.FetchAsync(imageUri, CancellationToken.None).Result;
+            if (response?.Content == null)
                 return null;
-            }
 
             HtmlImageInfo info = new HtmlImageInfo() { Source = src };
             ImagePartType type;
