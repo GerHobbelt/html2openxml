@@ -126,7 +126,7 @@ public partial class HtmlConverter
 
         // move the paragraph with BookmarkStart `_GoBack` as the last child
         var p = body.GetFirstChild<Paragraph>();
-        if (p != null && p.HasChild<BookmarkStart>())
+        if (p != null && p.GetFirstChild<BookmarkStart>()?.Id == "_GoBack")
         {
             p.Remove();
             body.Append(p);
@@ -174,12 +174,6 @@ public partial class HtmlConverter
     /// Gets or sets where to render the acronym or abbreviation tag.
     /// </summary>
     public AcronymPosition AcronymPosition { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the <c>div</c> tag should be processed as <c>p</c> (default <see langword="false"/>).
-    /// It depends whether you consider <c>div</c> as part of the layout or as part of a text field.
-    /// </summary>
-    public bool ConsiderDivAsParagraph { get; set; }
 
     /// <summary>
     /// Gets or sets whether anchor links are included or not in the convertion.
