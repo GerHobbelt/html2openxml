@@ -168,8 +168,8 @@ sealed class TableExpression(IHtmlElement node) : PhrasingElementExpression(node
         tableProperties.TableStyle = context.DocumentStyle.GetTableStyle(context.DocumentStyle.DefaultStyles.TableStyle);
 
         styleAttributes = node.GetStyles();
-        var width = styleAttributes.GetUnit("width");
-        if (!width.IsValid) width = Unit.Parse(node.GetAttribute("width"));
+        var width = styleAttributes.GetUnit("width", UnitMetric.Pixel);
+        if (!width.IsValid) width = Unit.Parse(node.GetAttribute("width"), UnitMetric.Pixel);
         if (!width.IsValid) width = new Unit(UnitMetric.Percent, 100);
 
         switch (width.Type)
@@ -207,6 +207,12 @@ sealed class TableExpression(IHtmlElement node) : PhrasingElementExpression(node
         var align = Converter.ToParagraphAlign(node.GetAttribute("align"));
         if (align.HasValue)
             tableProperties.TableJustification = new() { Val = align.Value.ToTableRowAlignment() };
+
+        var dir = node.GetTextDirection();
+        if (dir.HasValue)
+            tableProperties.BiDiVisual = new() { 
+                Val = dir == AngleSharp.Dom.DirectionMode.Rtl? OnOffOnlyValues.On : OnOffOnlyValues.Off
+            };
 
         var spacing = Convert.ToInt16(node.GetAttribute("cellspacing"));
         if (spacing > 0)
