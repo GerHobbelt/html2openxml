@@ -201,14 +201,17 @@ class PhrasingElementExpression(IHtmlElement node, OpenXmlLeafElement? styleProp
         bool endsWithSpace = true;
         foreach (var run in runs)
         {
-            var textElement = run.GetFirstChild<Text>()!;
+            var textElement = run.GetFirstChild<Text>();
+            // run can be also a hyperlink
+            textElement ??= run.GetFirstChild<Run>()?.GetFirstChild<Text>();
+
             if (textElement != null) // could be null when <br/>
             {
                 var text = textElement.Text;
                 // we know that the text cannot be empty because we skip them in TextExpression
                 if (!endsWithSpace && !text[0].IsSpaceCharacter())
                 {
-                    yield return new Run(new Text(" "));
+                    yield return new Run(new Text(" ") { Space = SpaceProcessingModeValues.Preserve });
                 }
                 endsWithSpace = text[text.Length - 1].IsSpaceCharacter();
             }
