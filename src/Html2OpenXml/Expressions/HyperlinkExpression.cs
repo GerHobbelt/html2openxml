@@ -59,25 +59,42 @@ sealed class HyperlinkExpression(IHtmlAnchorElement node) : PhrasingElementExpre
                 if (enDp.MoveNext()) alt = enDp.Current.Description;
                 else alt = null;
 
-                d.InsertInDocProperties(
-                    new a.HyperlinkOnClick() { Id = h.Id ?? h.Anchor, Tooltip = alt });
+                d.Inline ??= new a.Wordprocessing.Inline();
+                d.Inline.DocProperties ??= new a.Wordprocessing.DocProperties();
+
+                if (h.Anchor == "_top")
+                {
+                    // exception case: clickable image requires the _top bookmark get registred with a relationship
+                    var extLink = context.HostingPart.AddHyperlinkRelationship(new Uri("#_top", UriKind.Relative), false);
+                    d.Inline.DocProperties.Append(
+                        new a.HyperlinkOnClick() { Id = extLink.Id, Tooltip = alt });
+                }
+                else
+                {
+                    d.Inline.DocProperties.Append(
+                        new a.HyperlinkOnClick() { Id = h.Id ?? h.Anchor, Tooltip = alt });
+                }
             }
         }
 
         // can't use GetFirstChild<Run> or we may find the one containing the image
+        List<Run> runs = [];
         foreach (var el in childElements)
         {
-            if (el is Run run && !run.HasChild<Drawing>())
-            {
-                run.RunProperties ??= new();
-                run.RunProperties.RunStyle = context.DocumentStyle.GetRunStyle(
-                        context.DocumentStyle.DefaultStyles.HyperlinkStyle);
-                break;
-            }
+            if (el is Run r) runs.Add(r);
+            // unroll paragraphs. CloneNode is need to unparent the run
+            else runs.AddRange(el.Elements<Run>().Select(r => (Run) r.CloneNode(true)));
+        }
+
+        foreach (var run in runs.Where(run => !run.HasChild<Drawing>()))
+        {
+            run.RunProperties ??= new();
+            run.RunProperties.RunStyle = context.DocumentStyle.GetRunStyle(
+                    context.DocumentStyle.DefaultStyles.HyperlinkStyle);
         }
 
         // Append the processed elements and put them to the Run of the Hyperlink
-        h.Append(childElements);
+        h.Append(runs);
 
         return [h];
     }
@@ -90,15 +107,16 @@ sealed class HyperlinkExpression(IHtmlAnchorElement node) : PhrasingElementExpre
         if (string.IsNullOrEmpty(att))
             return null;
 
-        // is it an anchor?
-        if (att![0] == '#' && att.Length > 1)
+        // Always accept _top anchor
+        if (linkNode.IsTopAnchor())
         {
-            // Always accept _top anchor
-            if (!context.Converter.ExcludeLinkAnchor || att == "#_top")
-            {
-                h = new Hyperlink(
-                    ) { History = true, Anchor = att.Substring(1) };
-            }
+            h = new Hyperlink() { History = true, Anchor = "_top" };
+        }
+        // is it an anchor?
+        else if (!context.Converter.ExcludeLinkAnchor && linkNode.Hash.Length > 1 && linkNode.Hash[0] == '#')
+        {
+            h = new Hyperlink(
+                ) { History = true, Anchor = linkNode.Hash.Substring(1) };
         }
         // ensure the links does not start with javascript:
         else if (AngleSharpExtensions.TryParseUrl(att, UriKind.Absolute, out var uri))

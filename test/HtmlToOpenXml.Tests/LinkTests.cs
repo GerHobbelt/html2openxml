@@ -5,6 +5,8 @@ using DocumentFormat.OpenXml;
 
 namespace HtmlToOpenXml.Tests
 {
+    using a = DocumentFormat.OpenXml.Drawing;
+
     /// <summary>
     /// Tests hyperlink.
     /// </summary>
@@ -50,6 +52,20 @@ namespace HtmlToOpenXml.Tests
             Assert.That(hyperlink.LastChild?.InnerText, Is.EqualTo(" Test Caption"));
         }
 
+        [Test(Description = "Assert that `figcaption` tag doesn't generate paragraphs")]
+        public void ImageFigcaptionLink_ReturnsHyperlinkWithTextAndImage ()
+        {
+            var elements = converter.Parse(@"<a href='www.site.com'>Go to
+                <img src=""data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="" />
+                <figcaption>Caption for the image</figcaption></a>");
+            Assert.That(elements[0].FirstChild, Is.TypeOf(typeof(Hyperlink)));
+
+            var hyperlink = (Hyperlink) elements[0].FirstChild;
+            Assert.That(hyperlink.ChildElements, Has.Count.EqualTo(4));
+            Assert.That(hyperlink.ChildElements, Has.All.TypeOf(typeof(Run)), "Hyperlinks don't accept inner paragraphs");
+            Assert.That(hyperlink.Descendants<Drawing>(), Is.Not.Null);
+        }
+
         [Test]
         public void Anchoring_WithUnknownTarget_ReturnsHyperlinkWithBookmark ()
         {
@@ -74,8 +90,8 @@ namespace HtmlToOpenXml.Tests
             Assert.That(elements[0], Is.TypeOf(typeof(Paragraph)));
             Assert.That(elements[0].HasChild<Hyperlink>(), Is.True);
 
-            var hyperlink = (Hyperlink) elements[0].FirstChild!;
-            Assert.That(hyperlink.Anchor?.Value, Is.EqualTo("_top"));
+            var hyperlink = elements[0].GetFirstChild<Hyperlink>();
+            Assert.That(hyperlink?.Anchor?.Value, Is.EqualTo("_top"));
 
             // this should generate a Run and not an Hyperlink
             elements = converter.Parse(@"<a href=""#_anchor3"">Anchor3</a>");
@@ -180,6 +196,58 @@ namespace HtmlToOpenXml.Tests
 
             AssertHyperlink(container, host.ChildElements);
             AssertThatOpenXmlDocumentIsValid();
+        }
+
+        [TestCase("_top", Description = "Bookmark _top is reserved and stands in the top of the document")]
+        [TestCase("top", Description = "Alternate supported bookmark for user convenience")]
+        public async Task WithTopAnchoring_ReturnsAutoCreatedBookmark(string anchor)
+        {
+            await converter.ParseBody($"<table><tr><td>Cell1</td></tr></table><a href='#{anchor}'>Move to top</a>");
+
+            Assert.That(mainPart.Document.Body!.Elements().Count(), Is.EqualTo(3));
+            Assert.That(mainPart.Document.Body!.FirstChild, Is.TypeOf<Paragraph>());
+            Assert.That(mainPart.Document.Body!.ElementAt(1), Is.TypeOf<Table>());
+            Assert.That(mainPart.Document.Body!.LastChild, Is.TypeOf<Paragraph>());
+
+            var p = mainPart.Document.Body!.GetFirstChild<Paragraph>()!;
+            Assert.That(p.GetFirstChild<BookmarkStart>()?.Name?.Value, Is.EqualTo("_top"), "Reserved keyword `_top`");
+
+            p = mainPart.Document.Body!.GetLastChild<Paragraph>()!;
+            Assert.That(p.GetFirstChild<Hyperlink>()?.Anchor?.Value, Is.EqualTo("_top"));
+        }
+
+        [Test(Description = "Bookmark must not stand as a single paragraph but inserted into the heading")]
+        public async Task WithHeading_ThenTopAnchoring_PrependBookmarkIntoHeading()
+        {
+            await converter.ParseBody(@"<h1>Heading 1</h1>
+                <a href='#_top'>Move to top</a>");
+
+            var p = mainPart.Document.Body!.GetFirstChild<Paragraph>();
+            Assert.That(p, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(p.GetFirstChild<BookmarkStart>()?.Name?.Value, Is.EqualTo("_top"),
+                    "Expected `_top` bookmark in the first body paragraph");
+                Assert.That(p.GetFirstChild<Run>(), Is.Not.Null);
+                Assert.That(p.ParagraphProperties?.ParagraphStyleId?.Val?.Value, Is.EqualTo("Heading1"),
+                    "Expected first paragraph is the heading");
+            });
+        }
+
+        [Test(Description = "Clickable image pointing to `_top` bookmark requires additional link relationship")]
+        public async Task WithImageTopAnchoring_ReturnsClickableLink()
+        {
+            await converter.ParseBody(@"<a href='#_top'>Move to top
+                    <img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='>
+                </a>");
+            var p = mainPart.Document.Body!.GetFirstChild<Paragraph>();
+            var drawing = p?.Descendants<Drawing>().FirstOrDefault();
+            Assert.That(drawing, Is.Not.Null);
+            var linkTarget = drawing?.Inline?.DocProperties?.GetFirstChild<a.HyperlinkOnClick>()?.Id?.Value;
+            Assert.That(linkTarget, Is.Not.Null);
+            var rel = mainPart.HyperlinkRelationships.FirstOrDefault(r => r.Id == linkTarget);
+            Assert.That(rel, Is.Not.Null);
+            Assert.That(rel.Uri.ToString(), Is.EqualTo("#_top"));
         }
 
         private static void AssertHyperlink(OpenXmlPartContainer container, IEnumerable<OpenXmlElement> elements)

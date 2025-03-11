@@ -176,13 +176,16 @@ public partial class HtmlConverter
         foreach (var para in paragraphs)
             body.Append(para);
 
-        // move the paragraph with BookmarkStart `_GoBack` as the last child
-        // That bookmark is continuously moved after the last edit
+        // we automatically create the _top bookmark if missing. To avoid having an empty paragrah,
+        // let's try to merge with its next paragraph.
         var p = body.GetFirstChild<Paragraph>();
-        if (p != null && p.GetFirstChild<BookmarkStart>()?.Name == "_GoBack")
+        if (p != null && p.GetFirstChild<BookmarkStart>()?.Name == "_top"
+            && !p.HasChild<Run>()
+            && p.NextSibling() is Paragraph nextPara)
         {
+            nextPara.PrependChild(p.GetFirstChild<BookmarkEnd>()?.CloneNode(false));
+            nextPara.PrependChild(p.GetFirstChild<BookmarkStart>()!.CloneNode(false));
             p.Remove();
-            body.Append(p);
         }
 
         // Push the sectionProperties as the last element of the Body
