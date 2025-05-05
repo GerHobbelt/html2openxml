@@ -156,7 +156,7 @@ sealed class TableExpression(IHtmlTableElement node) : PhrasingElementExpression
                 }
             }
 
-            if (rows.Any())
+            if (rows.Length > 0)
                 columnCount = Math.Max(rows.Max(), columnCount);
         }
 
@@ -186,6 +186,9 @@ sealed class TableExpression(IHtmlTableElement node) : PhrasingElementExpression
                 tableProperties.TableWidth = new() { Type = TableWidthUnitValues.Dxa, 
                     Width = width.ValueInDxa.ToString(CultureInfo.InvariantCulture) };
                 break;
+            case UnitMetric.Auto:
+                tableProperties.TableWidth = new() { Width = "0", Type = TableWidthUnitValues.Auto };
+                break;
         }
 
         foreach (string className in tableNode.ClassList)
@@ -197,12 +200,6 @@ sealed class TableExpression(IHtmlTableElement node) : PhrasingElementExpression
                 break;
             }
         }
-
-        var align = Converter.ToParagraphAlign(tableNode.GetAttribute("align"));
-        if (!align.HasValue)
-            align = Converter.ToParagraphAlign(styleAttributes["justify-self"]);
-        if (align.HasValue)
-            tableProperties.TableJustification = new() { Val = align.Value.ToTableRowAlignment() };
 
         var dir = tableNode.GetTextDirection();
         if (dir.HasValue)
@@ -283,5 +280,22 @@ sealed class TableExpression(IHtmlTableElement node) : PhrasingElementExpression
                 };
             }
         }
+
+        var align = Converter.ToParagraphAlign(tableNode.GetAttribute("align"))
+            ?? Converter.ToParagraphAlign(styleAttributes["justify-self"]);
+        if (!align.HasValue)
+        {
+            var margin = styleAttributes.GetMargin("margin");
+            if (margin.Left.Type == UnitMetric.Auto)
+            {
+                if (margin.Right.Type == UnitMetric.Auto)
+                    align = JustificationValues.Center;
+                else
+                    align = JustificationValues.Right;
+            }
+        }
+
+        if (align.HasValue)
+            tableProperties.TableJustification = new() { Val = align.Value.ToTableRowAlignment() };
     }
 }
