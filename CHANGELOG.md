@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.7
+
+- Fix handling Uri with an anchor #209
+- New option DefaultStyles.NumberedHeadingStyle to support an alternate heading style #210
+
+## 3.2.6
+
+(wrong packaging, same code as 3.2.5)
+
 ## 3.2.5
 
 - Fix a crash with the new whitespace handling introduced in 3.2.3 #191
