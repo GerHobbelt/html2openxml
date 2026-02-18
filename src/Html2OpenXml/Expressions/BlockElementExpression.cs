@@ -9,10 +9,7 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
  * PARTICULAR PURPOSE.
  */
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using AngleSharp.Html.Dom;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -93,7 +90,7 @@ class BlockElementExpression: PhrasingElementExpression
     {
         return ComposeChildren(context, childNodes, paraProperties,
             (runs) => {
-                if ("always".Equals(styleAttributes!["page-break-before"], StringComparison.OrdinalIgnoreCase))
+                if (styleAttributes.HasKeyEqualsTo("page-break-before", "always"))
                 {
                     runs.Add(
                         new Run(
@@ -105,7 +102,7 @@ class BlockElementExpression: PhrasingElementExpression
                 }
             },
             (runs) => {
-                if ("always".Equals(styleAttributes!["page-break-after"], StringComparison.OrdinalIgnoreCase))
+                if (styleAttributes.HasKeyEqualsTo("page-break-after", "always"))
                 {
                     runs.Add(new Run(
                         new Break() { Type = BreakValues.Page }));
@@ -143,16 +140,14 @@ class BlockElementExpression: PhrasingElementExpression
                 return;
 
             var knownTags = new HashSet<string>();
-            foreach (var prop in props)
+            foreach (var prop in props.Where(p => !knownTags.Contains(p.LocalName)))
             {
-                if (!knownTags.Contains(prop.LocalName))
-                    knownTags.Add(prop.LocalName);
+                knownTags.Add(prop.LocalName);
             }
 
-            foreach (var prop in tableProperties)
+            foreach (var prop in tableProperties.Where(p => !knownTags.Contains(p.LocalName)))
             {
-                if (!knownTags.Contains(prop.LocalName))
-                    props.AddChild(prop.CloneNode(true));
+                props.AddChild(prop.CloneNode(true));
             }
         }
     }
@@ -191,8 +186,8 @@ class BlockElementExpression: PhrasingElementExpression
             };
         }
 
-        JustificationValues? align = Converter.ToParagraphAlign(styleAttributes!["text-align"]);
-        if (!align.HasValue) align = Converter.ToParagraphAlign(node.GetAttribute("align"));
+        JustificationValues? align = Converter.ToParagraphAlign(styleAttributes["text-align"]);
+        if (!align.HasValue) align = Converter.ToParagraphAlign(node.GetAttribute("align").AsSpan());
         if (!align.HasValue) align = Converter.ToParagraphAlign(styleAttributes["justify-content"]);
         if (align.HasValue)
         {
@@ -261,7 +256,7 @@ class BlockElementExpression: PhrasingElementExpression
 
         var lineHeight = styleAttributes.GetUnit("line-height");
         if (!lineHeight.IsValid 
-            && "normal".Equals(styleAttributes["line-height"], StringComparison.OrdinalIgnoreCase))
+            && styleAttributes.HasKeyEqualsTo("line-height", "normal"))
         {
             // if `normal` is specified, reset any values
             lineHeight = new Unit(UnitMetric.Unitless, 1);
@@ -269,7 +264,7 @@ class BlockElementExpression: PhrasingElementExpression
 
         if (lineHeight.IsValid)
         {
-            if (lineHeight.Type == UnitMetric.Unitless)
+            if (lineHeight.Metric == UnitMetric.Unitless)
             {
                 // auto should be considered as 240ths of a line
                 // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.spacingbetweenlines.line?view=openxml-3.0.1
@@ -278,7 +273,7 @@ class BlockElementExpression: PhrasingElementExpression
                     Line = Math.Round(lineHeight.Value * 240).ToString(CultureInfo.InvariantCulture)
                 };
             }
-            else if (lineHeight.Type == UnitMetric.Percent)
+            else if (lineHeight.Metric == UnitMetric.Percent)
             {
                 // percentage depends on the font size which is hard to determine here
                 // let's rely this to "auto" behaviour

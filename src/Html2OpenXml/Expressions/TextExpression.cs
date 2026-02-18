@@ -9,11 +9,9 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
  * PARTICULAR PURPOSE.
  */
-using System;
 #if NET5_0_OR_GREATER
 using System.Collections.Frozen;
 #endif
-using System.Collections.Generic;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Text;
@@ -96,14 +94,11 @@ sealed class TextExpression(INode node) : HtmlDomExpression
             }
 
             // if previous element is an image, append a space separator
-            // if this is a non-empty phrasing element, append a space separator
-            if (startsWithSpace && node.PreviousSibling is IHtmlImageElement)
-            {
-                text = " " + text;
-            }
-            else if (startsWithSpace && prevIsPhrasing
+            if ((startsWithSpace && node.PreviousSibling is IHtmlImageElement)
+                // if this is a non-empty phrasing element, append a space separator
+                || (startsWithSpace && prevIsPhrasing
                 && node.PreviousSibling!.TextContent.Length > 0
-                && !node.PreviousSibling!.TextContent[node.PreviousSibling.TextContent.Length - 1].IsWhiteSpaceCharacter())
+                && !node.PreviousSibling!.TextContent[node.PreviousSibling.TextContent.Length - 1].IsWhiteSpaceCharacter()))
             {
                 text = " " + text;
             }

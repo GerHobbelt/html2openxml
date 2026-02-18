@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.3.0
+
+- Rewriting of parsing to use System.Span instead of Regex
+- Set Timeout on remaining Regex to prevent any DoS attack
+- Remove extra border space in table #156
+- Added .NET 10 as an explicit target
+
+## 3.2.8
+
+- Fix a fatal crash when trying to convert multiple images #215
+- New feature to allow to reference external image instead of embedding them #216
+- Fix a potential issue on image streams that are disposed too early.
+- Support table col with percentage width #206
+
 ## 3.2.7
 
 - Fix handling Uri with an anchor #209

@@ -9,7 +9,6 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
  * PARTICULAR PURPOSE.
  */
-using System.Collections.Generic;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using HtmlToOpenXml.Expressions;
@@ -44,6 +43,9 @@ sealed class ParsingContext(HtmlConverter converter, OpenXmlPartContainer hostin
     /// <summary>Whether the text content should collapse the whitespaces.</summary>
     public bool CollapseWhitespaces { get; set; } = true;
 
+    /// <summary>Whether the page orientation is portrait or landscape.</summary>
+    public bool IsLandscape { get; set; }
+
 
 
     public void CascadeStyles (OpenXmlElement element)
@@ -57,7 +59,8 @@ sealed class ParsingContext(HtmlConverter converter, OpenXmlPartContainer hostin
         var childContext = new ParsingContext(Converter, HostingPart, ImageLoader) {
             propertyBag = propertyBag,
             parentExpression = expression,
-            parentContext = this
+            parentContext = this,
+            IsLandscape = IsLandscape
         };
         return childContext;
     }
