@@ -1,11 +1,17 @@
 # Changelog
 
+## 3.3.1
+
+- Improve parsing to correctly handle spaces in css style #222
+
 ## 3.3.0
 
-- Rewriting of parsing to use System.Span instead of Regex
+- Rewriting of parsing to use `Span<char>` instead of Regex for +25% performance gain 🚀
 - Set Timeout on remaining Regex to prevent any DoS attack
 - Remove extra border space in table #156
 - Added .NET 10 as an explicit target
+- Fix page break. Add support for `break-before` and `break-after` css style #220
+- Support registering custom bookmark with `data-bookmark` #219
 
 ## 3.2.8
 
