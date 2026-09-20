@@ -10,4 +10,8 @@
     <PropertyGroup>
         <DocumentFormatOpenXmlPackageVersion>3.5.1</DocumentFormatOpenXmlPackageVersion>
     </PropertyGroup>
+
+    <PropertyGroup Condition="'$(PackageVersion)' != ''">
+        <PackageVersion>$(PackageVersion)</PackageVersion>
+    </PropertyGroup>
 </Project>

@@ -5,25 +5,30 @@ name: 'publish_nuget.yml'
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[1-9]{1,2}.[0-9]+.[0-9]+'
   workflow_dispatch:  # Allows manual triggering
     inputs:
       version:
         description: 'NuGet package version (SemVer)'
         required: true
-        default: '1.0.0'
-      publish_to_nuget:
-        description: 'Publish to NuGet.org?'
+        type: string
+        default: '1.0.0-beta1'
+        pattern: '^[1-9]{1,2}.[0-9]+.[0-9]+(-beta\d+)?$'
+      create_release:
+        description: 'Create draft Release?'
         required: false
         type: boolean
         default: true
 
+permissions:
+  id-token: write  # nuget authentication
+  contents: read
+
 jobs:
   publish:
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    if: startsWith(github.ref, 'refs/tags/') || 
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && github.actor == 'onizet')
     runs-on: ubuntu-latest
-    env:
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
     steps:
       - uses: actions/checkout@v6
@@ -33,14 +38,13 @@ jobs:
         if: github.event_name == 'push'
         run: |
           TAG_COMMIT=$(git rev-parse ${{ github.ref }})
-          BASE=$(git merge-base HEAD origin/master)
-          
-          # Allow tag to be ahead of master (new commits since tagging)
-          # But reject if tag is behind or on a different branch
-          if git merge-base --is-ancestor $BASE $TAG_COMMIT; then
-            echo "Tag validation passed"
+          # Check if tag commit is reachable from origin/master
+          ORIGIN_MASTER=$(git rev-parse origin/master)
+
+          if git merge-base --is-ancestor $TAG_COMMIT $ORIGIN_MASTER; then
+            echo "Tag validation passed: tag points to valid commit on master branch"
           else
-            echo "ERROR: Tag appears to be on wrong branch"
+            echo "ERROR: Tag appears to be on wrong branch or detached HEAD state detected"
             exit 1
           fi
 
@@ -50,33 +54,58 @@ jobs:
           dotnet-version: latest
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: |
+          dotnet build src/Html2OpenXml/HtmlToOpenXml.csproj \
+            --configuration Release /p:SourceRevisionId=${{ github.sha }}
 
       - name: Pack NuGet Package
         run: |
-          # Use the version from tag or workflow_dispatch input
-          VERSION=${{ github.ref_name == '' && inputs.version || github.ref_name }}
-          dotnet pack src/Html2OpenXml/HtmlToOpenXml.csproj --configuration Release --output ./nupkg \
-            -p Version=$VERSION
-
-      - name: Push to NuGet.org
-        if: inputs.publish_to_nuget
+          dotnet pack src/Html2OpenXml/HtmlToOpenXml.csproj \
+            --configuration Release \
+            --output ./nupkg \
+            -- /p:PackageVersion=${{ inputs.version }}
+      - name: Verify Package Created
         run: |
-          # Ensure we have packages to push
-          if [ ! -f "./nupkg/*.nupkg" ]; then
-            echo "ERROR: No .nupkg files found in ./nupkg/"
+          if [ ! -f ./nupkg/*.nupkg ]; then
+            echo "ERROR: No NuGet packages found after packing"
             exit 1
           fi
-          
+
+      - name: Approve
+        uses: trstringer/manual-approval@v1
+        with:
+            secret: ${{ github.TOKEN }}
+            approvers: onizet
+            minimum-approvals: 1
+            issue-title: "Approval for publishing to Nuget.org"
+            issue-body: "Please approve or deny the deployment to Nuget.org"
+            exclude-workflow-initiator-as-approver: false
+ 
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet.org
+        run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --api-key $NUGET_API_KEY \
-            -s https://api.nuget.org/v3/index.json
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
 
       - name: Create GitHub Release
+        if: inputs.create_release
         run: |
-          VERSION=${{ github.ref_name == '' && inputs.version || github.ref_name }}
-          gh release create "$VERSION" \
-            --title "Release $VERSION" \
-            *.nupkg \
+          TAG_COMMIT=${{ inputs.version != '' && inputs.version || github.ref_name }}
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "ERROR: No version specified and no tag detected. Cannot create release."
+            exit 1
+          fi
+
+          gh release create "$TAG_COMMIT" \
+            --title "Release $TAG_COMMIT" \
             --generate-notes \
-            --draft  # Set to false when ready to publish
+            --draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
