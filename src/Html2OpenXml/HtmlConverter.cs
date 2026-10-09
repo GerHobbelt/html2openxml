@@ -26,14 +26,14 @@ namespace HtmlToOpenXml;
 /// are automatically reused.
 ///
 /// <para>
-/// Supports both left-to-right (LTR) and right-to-left (LTR) content. Direction can be specified
-/// using the HTML <c>div</c> attribute (recommended) or inferred from the <c>lang</c> attribute.
+/// Supports both left-to-right (LTR) and right-to-left (LTR) visual flow content. Direction can be specified
+/// using the HTML <c>dir</c> attribute (recommended) or inferred from the <c>lang</c> attribute.
 /// When not specified, the converter preserves the layout defined by the target Word document.
 /// </para>
 ///
 /// <para>
-/// Supports advanced HTML table layouts including nested tables, combined row and column spanning,
-/// column definitions, vertical text, and automatic conversion of table widths.
+/// Supports full OpenXML table translation, including complex structural elements (nested tables, `colspan`/`rowspan`)
+/// and precise dimension mapping (`px`, `%`), column definitions, vertical text, and automatic conversion of table widths.
 /// Table widths can be specified using auto, percentages, or fixed dimensions (px/pt).
 /// </para>
 ///
@@ -113,20 +113,6 @@ public partial class HtmlConverter
     }
 
     /// <summary>
-    /// Start the asynchronous parse processing where the output is intended to be inserted in <see cref="MainDocumentPart"/>.
-    /// </summary>
-    /// <param name="html">The HTML content to parse</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>Returns a collection of generated OpenXml elements.</returns>
-    [Obsolete("Use ParseAsync instead to respect naming convention")]
-    [NuSpec.AI.AiIgnore]
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    public Task<IEnumerable<OpenXmlCompositeElement>> Parse(string html, CancellationToken cancellationToken = default)
-    {
-        return ParseAsync(html, cancellationToken);
-    }
-
-    /// <summary>
     /// Convert HTML into OpenXml elements and return them to the caller.
     /// However, the conversion process itself may still update the underlying document
     /// by creating styles, numbering definitions, image parts, bookmarks, or other resources
@@ -189,7 +175,7 @@ public partial class HtmlConverter
 
         var paragraphs = await ParseCoreAsync(html, headerPart, headerImageLoader,
             new ParallelOptions() { CancellationToken = cancellationToken },
-            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.HeaderStyle))
+            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.ParagraphHeaderStyle))
             .ConfigureAwait(false);
 
         headerPart.Header.Append(paragraphs);
@@ -219,7 +205,7 @@ public partial class HtmlConverter
 
         var paragraphs = await ParseCoreAsync(html, footerPart, footerImageLoader,
             new ParallelOptions() { CancellationToken = cancellationToken },
-            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.FooterStyle))
+            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.ParagraphFooterStyle))
             .ConfigureAwait(false);
 
         footerPart.Footer.Append(paragraphs);
@@ -251,7 +237,7 @@ public partial class HtmlConverter
         bodyImageLoader ??= new ImagePrefetcher<MainDocumentPart>(mainPart, webRequester, ImageProcessing);
         var paragraphs = await ParseCoreAsync(html, mainPart, bodyImageLoader,
             new ParallelOptions() { CancellationToken = cancellationToken },
-            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.Paragraph))
+            htmlStyles.GetParagraphStyle(htmlStyles.DefaultStyles.ParagraphBodyStyle))
             .ConfigureAwait(false);
 
         if (!paragraphs.Any())
@@ -281,35 +267,6 @@ public partial class HtmlConverter
             sectionProperties.Remove();
             body.AddChild(sectionProperties);
         }
-    }
-
-    /// <summary>
-    /// Start the asynchronous parse processing. Use this overload if you want to control the downloading of images.
-    /// </summary>
-    /// <param name="html">The HTML content to parse</param>
-    /// <param name="parallelOptions">The configuration of parallelism while downloading the remote resources.</param>
-    /// <returns>Returns a list of parsed paragraph.</returns>
-    [Obsolete("Use ParseAsync instead to respect naming convention")]
-    [NuSpec.AI.AiIgnore]
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    public Task<IEnumerable<OpenXmlCompositeElement>> Parse(string html, ParallelOptions parallelOptions)
-    {
-        bodyImageLoader ??= new ImagePrefetcher<MainDocumentPart>(mainPart, webRequester, ImageProcessing);
-
-        return ParseCoreAsync(html, mainPart, bodyImageLoader, parallelOptions);
-    }
-
-    /// <summary>
-    /// Start the asynchronous parse processing and append the output into the Body of the document.
-    /// </summary>
-    /// <param name="html">The HTML content to parse</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    [Obsolete("Use ParseBody instead for output clarification")]
-    [NuSpec.AI.AiIgnore]
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    public Task ParseHtml(string html, CancellationToken cancellationToken = default)
-    {
-        return ParseBody(html, cancellationToken);
     }
 
     /// <summary>
@@ -437,10 +394,11 @@ public partial class HtmlConverter
     /// Defines whether internal anchor hyperlinks are converted to Word bookmarks.
     /// 
     /// <para>
-    /// Anchor links target another location within the document, such as
-    /// <c>#_top</c> or a bookmark reference (<c>#bookmarkReference</c>).
-    /// Bookmars can be created automatically from HTML anchors or explicitely
-    /// using the <c>data-bookmark</c> attribute.
+    /// Anchor links target another location within the document, such as <c>#_top</c> or
+    /// a bookmark reference (<c>#bookmarkReference</c>).
+    /// Bookmars can be created automatically from HTML anchors or explicitely using the <c>data-bookmark</c> attribute.
+    /// When <c>data-bookmark</c> is present, the library uses this target name to jump to an existing structural
+    /// element in the destination DOCX file rather than creating a new anchor.
     /// </para>
     /// <code>
     /// &lt;h1 data-bookmark="chapter1"&gt;Introduction&lt;/h1&gt;
@@ -457,23 +415,6 @@ public partial class HtmlConverter
     /// and set the value of href to <c>#your_bookmark</c>.
     /// </remarks>
     public bool SupportsAnchorLinks { get; set; } = true;
-
-    /// <summary>
-    /// Defines whether anchor links are included or not in the conversion.
-    /// </summary>
-    /// <remarks>An anchor is a term used to define a hyperlink destination inside a document.
-    /// <see href="http://www.w3schools.com/HTML/html_links.asp"/>.
-    /// <br/>
-    /// It exists some predefined anchors used by Word such as _top to refer to the top of the document.
-    /// The anchor <i>#_top</i> is always accepted regardless this property value.
-    /// For others anchors like refering to your own bookmark or a title, add a 
-    /// <see cref="DocumentFormat.OpenXml.Wordprocessing.BookmarkStart"/> and 
-    /// <see cref="DocumentFormat.OpenXml.Wordprocessing.BookmarkEnd"/> elements
-    /// and set the value of href to <i><c>#name of your bookmark</c></i>.
-    /// </remarks>
-    [Obsolete("Use SupportsAnchorLink instead, if ExcludeLinkAnchor = true -> SupportsAnchorLink = false")]
-    [NuSpec.AI.AiIgnore]
-    public bool ExcludeLinkAnchor { get => !SupportsAnchorLinks; set => SupportsAnchorLinks = !value; }
 
     /// <summary>
     /// Gets the style manager for the current conversion.
