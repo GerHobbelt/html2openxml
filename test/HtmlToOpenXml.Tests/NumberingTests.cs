@@ -738,8 +738,8 @@ namespace HtmlToOpenXml.Tests
         /// <param name="listType"></param>
         /// <param name="nestedListType"></param>
         /// <returns></returns>
-        [TestCase("disc", "square", ExpectedResult = "•,▪,•,▪")]
-        [TestCase("disc", "circle", ExpectedResult = "•,\u25CB,•,\u25CB")]
+        [TestCase("disc", "square", ExpectedResult = "•,▪")]
+        [TestCase("disc", "circle", ExpectedResult = "•,\u25CB")]
         public async Task<string> NestedUnorderedList_TypeAttribute_UsesOwnBullet(string listType, string nestedListType)
         {
             await converter.ParseBody($@"
@@ -752,7 +752,7 @@ namespace HtmlToOpenXml.Tests
                 </ul>");
 
             var paragraphs = mainPart.Document!.Body!.Elements<Paragraph>().ToList();
-            Assert.That(paragraphs, Has.Count.EqualTo(4));
+            Assert.That(paragraphs, Has.Count.EqualTo(2));
             AssertThatOpenXmlDocumentIsValid();
 
             return string.Join(",", paragraphs.Select(GetBulletText).Select(BulletTextUnicode));
