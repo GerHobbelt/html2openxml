@@ -294,9 +294,13 @@ namespace HtmlToOpenXml.Tests
 
         static readonly object[] BorderWidthCases =
         [
+            // unset border <> border=0
+            new object[] { "", null!, null! },
             // Negative border should be considered as zero
-            new object[] { "border='-1'", null!, null! },
-            new object[] { "border='0'", null!, null! },
+            new object[] { "border='-1'", 
+                new string[] { "none", "none", "none", "none", "none", "none" }, null! },
+            new object[] { "border='0'", 
+                new string[] { "none", "none", "none", "none", "none", "none" }, null! },
             new object[] { "border='1'",
                 new string[] { "none", "none", "none", "none", "single", "single" }, 
                 new uint?[] { null, null, null, null, 14, 14 } },
@@ -523,9 +527,9 @@ namespace HtmlToOpenXml.Tests
             {
                 // normally, Val should be null
                 if (runProperties.Bold.Val is not null)
-                    Assert.That(runProperties.Bold.Val, Is.EqualTo(true));
+                    Assert.That(runProperties.Bold.Val, Is.True);
                 if (runProperties.Italic.Val is not null)
-                    Assert.That(runProperties.Italic.Val, Is.EqualTo(true));
+                    Assert.That(runProperties.Italic.Val, Is.True);
             }
         }
 
