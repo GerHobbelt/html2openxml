@@ -14,19 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # fetch all commits to get last updated time or other git log info
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+          sparse-checkout: |
+            .
+            docs
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: pnpm/setup@v1
         with:
-          # choose node.js version to use
-          node-version: 24
+          version: 11
+          runtime: node@22
           # cache deps for pnpm
-          cache: pnpm
+          cache: true
 
       - name: Install deps
         run: pnpm ci
